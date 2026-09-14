@@ -17,6 +17,10 @@ app:
     #     config:
     #       path: /
 
+    # view tracking
+    - api:home/visits: true
+    - app-root-element:home/visit-listener: true
+
     # Visit tracking records which pages users navigate to and is disabled by default.
     # Enable it to populate the Most Visited and Recently Visited widgets on the Home page.
     # Visit data is stored via UserSettings storage if available, otherwise browser localStorage.
@@ -97,7 +101,7 @@ app:
               height: 4
 
 organization:
-  name: My Company
+  name: JKS Systems
 
 backend:
   # Used for enabling authentication, secret is shared by all backend plugins
@@ -166,7 +170,7 @@ auth:
   # see https://backstage.io/docs/auth/ to learn about auth providers
   providers:
     # See https://backstage.io/docs/auth/guest/provider
-    guest: {}
+    # guest: {}
   # see https://backstage.io/docs/ai/mcp-actions#client-id-metadata-documents
   # to learn more about client id metadata documents
   clientIdMetadataDocuments:
@@ -188,7 +192,7 @@ catalog:
     entityFilename: catalog-info.yaml
     pullRequestBranchName: backstage-integration
   rules:
-    - allow: [Component, System, API, Resource, Location]
+    - allow: [Component, System, API, Resource, Location, Template]
   locations:
     # Local example data, file locations are relative to the backend process, typically `packages/backend`
     - type: file

@@ -11,12 +11,13 @@ import {
   createFrontendModule,
   useApi,
 } from '@backstage/frontend-plugin-api';
+import githubActionsPlugin from '@backstage-community/plugin-github-actions/alpha';
 
 const signInPage = SignInPageBlueprint.make({
   params: {
     loader: async () => props => {
       const configApi = useApi(configApiRef);
-      if (configApi.getString('auth.environment') === 'developement') {
+      if (configApi.getString('auth.environment') === 'development') {
         return (
           <SignInPage
             {...props}
@@ -57,5 +58,6 @@ export default createApp({
       pluginId: 'app',
       extensions: [signInPage],
     }),
+    githubActionsPlugin,
   ],
 });
