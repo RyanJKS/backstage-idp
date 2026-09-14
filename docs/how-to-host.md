@@ -1,90 +1,81 @@
-# How to build and host Backstage
+# Run Backstage with Docker
 
 [Back to README](../README.md)
 
-The backend serves the bundled frontend in production. The repository supplies a
-Dockerfile and production config, but no deployment manifests or hosting pipeline.
+## Local development
 
-## 1. Build the image
+You need Docker, Compose **2.30+**, your `app-config.local.yaml`, and the
+`platform-blueprints` repository cloned alongside this repository.
 
-Use **Node.js 24**, matching the Docker image's Node major version for native
-dependencies. From the repository root:
-
-```sh
-yarn install --immutable
-yarn tsc
-yarn build:backend
-yarn build-image
-```
-
-This builds the image tagged `backstage`. The
-[Dockerfile](../packages/backend/Dockerfile) packages those build outputs; it does
-not build the source from scratch.
-
-## 2. Prepare runtime configuration
-
-Edit [app-config.production.yaml](../app-config.production.yaml) before building,
-or mount a deployment-specific override into the container and pass it with an
-additional `--config` argument after the shared and production files.
-
-| Setting                             | Required action                                                                                      |
-| ----------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| `app.baseUrl` and `backend.baseUrl` | Set the actual public URLs. The defaults are `http://localhost:7007`.                                |
-| `backend.cors.origin`               | Set the actual frontend origin if needed; the shared value is the development URL.                   |
-| `backend.database`                  | Provision PostgreSQL and supply the variables below.                                                 |
-| `auth`                              | Configure real login and identity resolution. The guest placeholder is not a production login setup. |
-| `catalog.locations`                 | Replace or extend sample sources. Container file paths start with `./examples/`.                     |
-| `techdocs`                          | Choose CI builds and shared storage for hosted use.                                                  |
-
-Supply these variables through the hosting platform's secrets/environment settings:
-
-```text
-POSTGRES_HOST
-POSTGRES_PORT
-POSTGRES_USER
-POSTGRES_PASSWORD
-GITHUB_TOKEN
-```
-
-Include variables for any auth provider and other integrations you configured.
-The PostgreSQL host must be reachable **from inside the container**; `localhost`
-there means the container itself. Give the database account the privileges needed
-for Backstage's plugin databases/schema migrations, and configure TLS as required
-by your database provider.
-
-Follow [authentication](how-to-configure-auth.md) and
-[TechDocs](how-to-add-techdocs.md) before exposing those capabilities to users.
-Permissions are enabled here, but the registered policy allows all requests.
-
-## 3. Run the container
-
-After exporting the variables above in your launch environment, this is a basic
-local image run command:
+From the repository root:
 
 ```sh
-docker run --rm --name backstage -p 7007:7007 \
-  -e POSTGRES_HOST -e POSTGRES_PORT -e POSTGRES_USER -e POSTGRES_PASSWORD \
-  -e GITHUB_TOKEN \
-  backstage
+# First-time setup only; keep your existing .env.yarn if you already have one.
+cp .env.example .env.yarn
 ```
 
-Add `-e` arguments for any additional variables referenced by your config. This
-command starts only Backstage: PostgreSQL must already exist. The image loads
-`app-config.yaml` followed by `app-config.production.yaml`; it excludes local
-override files.
+Replace the placeholder credentials in `.env.yarn`, then start:
 
-For a hosted deployment, publish the image to your registry, deploy it through
-your platform, route HTTPS traffic to port 7007, and configure restart behavior,
-database persistence/backups, logs, and health monitoring.
+```sh
+docker compose up --build
+```
 
-## 4. Verify the deployment
+Open **<http://localhost:3000>**. The backend runs on port **7007**.
 
-1. Check container logs for configuration, database, and missing-package errors.
-2. Open the public portal URL and test real login and identity resolution.
-3. Verify catalog ingestion, a test template, search, and documentation.
-4. Restart the container and confirm database-backed data remains available.
+Compose reads `.env.yarn` for secrets and `app-config.local.yaml` for app settings.
+It starts PostgreSQL automatically, uses separate dependency volumes, and mounts
+`../platform-blueprints` read-only for your local templates. Source edits reload
+automatically. Secrets stay out of the image.
 
-Next: automate checks and image publishing in CI. See
-[Backstage deployment](https://backstage.io/docs/deployment/),
-[Docker](https://backstage.io/docs/deployment/docker/), and
-[keeping Backstage updated](https://backstage.io/docs/getting-started/keeping-backstage-updated/).
+Set your GitHub OAuth callback to
+`http://localhost:7007/api/auth/github/handler/frame`. Your GitHub username must
+match a User entity in `catalog/entities/users.yaml`.
+
+```sh
+docker compose logs -f backstage                       # View app logs
+docker compose restart backstage                      # After dependency changes
+docker compose up -d --force-recreate backstage        # After secret changes
+docker compose down                                   # Stop; keep database data
+```
+
+Changing `POSTGRES_PASSWORD` does not update an existing database user's password.
+**`docker compose down -v` permanently deletes the local database and other volumes.**
+
+## Production
+
+The production image builds from source and serves both the frontend and backend
+on port **7007**. It uses `app-config.production.yaml`, not your local config.
+
+1. Provision PostgreSQL. Set `POSTGRES_HOST` to an address reachable from the
+   container; `localhost` points to the app container itself.
+2. Supply the variables in [.env.example](../.env.example) through your hosting
+   platform. Set `APP_BASE_URL` to your public URL, such as
+   `https://backstage.example.com`.
+3. Set the GitHub OAuth callback to
+   `https://backstage.example.com/api/auth/github/handler/frame`.
+4. Build the image and route HTTPS traffic to port **7007**.
+
+```sh
+docker build -t backstage:local .
+```
+
+To test the production image locally, use `.env.yarn` with reachable database
+credentials:
+
+```sh
+docker run --rm --init --name backstage \
+  --env-file .env.yarn \
+  -e APP_BASE_URL=http://localhost:7007 \
+  -p 127.0.0.1:7007:7007 \
+  backstage:local
+```
+
+Open <http://localhost:7007>, test GitHub sign-in, and check readiness:
+
+```sh
+curl --fail http://localhost:7007/.backstage/health/v1/readiness
+```
+
+Before deploying, configure database TLS and backups, persistent TechDocs storage
+(or an external publisher), and review the current allow-all permission policy.
+Kubernetes setup comes later.

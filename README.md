@@ -29,9 +29,35 @@ Stop with `Ctrl+C`.
 | `yarn new`           | Scaffold a plugin or module.                        |
 | `yarn build:backend` | Build the backend and bundled frontend for hosting. |
 
-Local login uses **Guest**. The shared database default is **in-memory SQLite**;
+Local login uses **GitHub** when the local override is present. The shared database default is **in-memory SQLite**;
 `app-config.local.yaml` can override it with PostgreSQL. The database you configure
 must be running and reachable; Backstage does not start PostgreSQL for you.
+
+### Docker
+
+For development, Docker Compose runs the frontend, backend, and PostgreSQL:
+
+```sh
+# Populate .env.yarn first; see docs/how-to-host.md for required variables.
+docker compose up --build
+```
+
+Open <http://localhost:3000>. Source edits reload automatically. Secrets come from
+`.env.yarn` at runtime and are excluded from image builds. PostgreSQL data and
+container dependencies use named volumes. Stop with `docker compose down`.
+
+For production, build the image directly from source:
+
+```sh
+docker build -t backstage:local .
+docker run --rm --init --env-file .env.yarn \
+  -e APP_BASE_URL=http://localhost:7007 \
+  -p 127.0.0.1:7007:7007 backstage:local
+```
+
+The production image needs a reachable PostgreSQL server; it does not include one.
+Use your HTTPS portal URL for `APP_BASE_URL` when deploying.
+See [Build and host](docs/how-to-host.md) for secrets, OAuth callbacks, and validation.
 
 ## Trace configuration from files to the running app
 
@@ -102,7 +128,7 @@ browser. Plugin code reads settings through Backstage's config APIs.
 | [packages/app/package.json](packages/app/package.json) and [packages/backend/package.json](packages/backend/package.json) | Dependencies and commands for each workspace                  | Yarn and Backstage CLI; frontend discovery also uses installed packages with `app.packages: all` |
 | [examples/](examples/)                                                                                                    | Sample entities, users/groups, templates, template content    | Catalog reads configured YAML locations; scaffolder reads template content when a task runs      |
 | [catalog-info.yaml](catalog-info.yaml)                                                                                    | Catalog metadata describing this portal                       | Catalog only after this file is registered or included in a configured source                    |
-| [packages/backend/Dockerfile](packages/backend/Dockerfile)                                                                | Container files, build steps, production startup command      | Docker during build; Node runs the backend when the container starts                             |
+| [Dockerfile](Dockerfile)                                                                | Container files, build steps, production startup command      | Docker during build; Node runs the backend when the container starts                             |
 
 Adding YAML settings does not install or register a backend plugin. Add the
 dependency to its workspace and register it in `packages/backend/src/index.ts`.
@@ -129,7 +155,7 @@ node packages/backend --config app-config.yaml --config app-config.production.ya
 
 That command does not load `app-config.local.yaml` or `.env.yarn`. Supply secrets
 through the container's runtime environment. The app backend serves the built
-frontend; the production config currently points both public URLs at port 7007.
+frontend; the production config uses `APP_BASE_URL` for both public URLs and CORS.
 
 ### Where to look when a request fails
 
@@ -161,7 +187,7 @@ load: identify the responding server and failing endpoint first.
 | [catalog-info.yaml](catalog-info.yaml)                                                                                  | Catalog metadata describing this portal; it still needs registering.                                                  |
 | [examples/](examples/)                                                                                                  | Sample services, users/groups, and software template files.                                                           |
 | [plugins/](plugins/)                                                                                                    | Your own reusable plugins/modules.                                                                                    |
-| [packages/backend/Dockerfile](packages/backend/Dockerfile)                                                              | Container packaging.                                                                                                  |
+| [Dockerfile](Dockerfile)                                                              | Container packaging.                                                                                                  |
 
 ## Where do configs and environment variables go?
 
