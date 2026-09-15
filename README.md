@@ -46,14 +46,21 @@ Open <http://localhost:3000>. Source edits reload automatically. Secrets come fr
 `.env.yarn` at runtime and are excluded from image builds. PostgreSQL data and
 container dependencies use named volumes. Stop with `docker compose down`.
 
-For production, build the image directly from source:
+For production, build Backstage on the host (or CI runner), then package it:
 
 ```sh
-docker build -t backstage:local .
+yarn install --immutable
+yarn tsc
+yarn build:backend --config ../../app-config.yaml
+docker build --target production -t backstage:local .
 docker run --rm --init --env-file .env.yarn \
   -e APP_BASE_URL=http://localhost:7007 \
   -p 127.0.0.1:7007:7007 backstage:local
 ```
+
+CI builds pull requests and publishes `<dockerhub-username>/chaos-generator:<6-character-sha>`
+on pushes to `main` and manual runs. Deploy that exact image tag. The shared Dockerfile provides separate `development` and `production` targets;
+Compose selects `development`.
 
 The production image needs a reachable PostgreSQL server; it does not include one.
 Use your HTTPS portal URL for `APP_BASE_URL` when deploying.
