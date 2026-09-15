@@ -1,0 +1,70 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Locate Yarn cache
+        id: yarn-cache
+        run: echo "path=$(yarn config get cacheFolder)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/cache@v4
+        with:
+          path: ${{ steps.yarn-cache.outputs.path }}
+          key: yarn-${{ runner.os }}-node24-${{ hashFiles('yarn.lock', '.yarnrc.yml') }}
+          restore-keys: yarn-${{ runner.os }}-node24-
+
+      - name: Install dependencies
+        run: yarn install --immutable
+
+      - name: Check TypeScript
+        run: yarn tsc
+
+      - name: Build Backstage
+        run: yarn build:backend --config ../../app-config.yaml
+
+      - name: Validate pull request image
+        if: github.event_name == 'pull_request'
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          target: production
+          push: false
+
+      - name: Upload backend build
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-build
+          path: |
+            packages/backend/dist/skeleton.tar.gz
+            packages/backend/dist/bundle.tar.gz
+          if-no-files-found: error
+          retention-days: 1
+
+  publish:
+    name: Publish Docker image
+    needs: checks
+    if: github.event_name != 'pull_request'
+    uses: ./.github/workflows/build-push.yaml
+    secrets:
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
