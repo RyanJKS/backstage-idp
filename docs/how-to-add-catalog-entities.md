@@ -28,6 +28,26 @@ The catalog describes software and ownership. It does not deploy the software.
 4. Open the entity in the catalog. Check its metadata, owner, and processing
    errors. Catalog ingestion is asynchronous, so allow time for processing.
 
+## Show GitHub Actions for an entity
+
+The GitHub Actions plugin is registered in the new frontend system. Its tab appears
+on an entity page only when the entity has this annotation:
+
+```yaml
+metadata:
+  annotations:
+    github.com/project-slug: YOUR_ORG/YOUR_REPO
+```
+
+Use the repository's actual owner and name, not a URL. Update the descriptor in
+that repository and refresh the entity in the catalog. Open the entity's
+**GitHub Actions** tab; the plugin does not add a sidebar item. Sign in with GitHub
+to load workflow runs, using an account that can access the repository.
+
+The portal's own descriptor includes `RyanJKS/backstage-idp`. Local development
+loads it through `app-config.local.yaml`. Other imported repositories need their
+own annotation. A repository without workflow runs shows an empty list.
+
 ## Load a local example at startup
 
 1. Add an entity to [examples/entities.yaml](../examples/entities.yaml), separating
@@ -65,3 +85,5 @@ copied into the image and a matching production path.
 Local SQLite is in memory. UI-only registrations disappear after restart; file
 locations are loaded again. Use configured sources or a persistent database for
 data you want to retain.
+
+Full example on how to add groups: https://github.com/backstage/backstage/blob/master/packages/catalog-model/examples/acme/team-a-group.yaml

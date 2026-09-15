@@ -1,0 +1,17 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# The shared credential file stays at the repository root.
+# Bootstrap resources only; PostgreSQL and Backstage are deployed separately.
+namespace: backstage
+resources:
+  - namespace.yaml
+
+secretGenerator:
+  - name: backstage-secrets
+    envs:
+      - ../.env.yarn
+
+generatorOptions:
+  # Helm and the Backstage Deployment reference this stable Secret name.
+  disableNameSuffixHash: true

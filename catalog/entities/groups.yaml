@@ -1,0 +1,28 @@
+---
+apiVersion: backstage.io/v1alpha1
+kind: Group
+metadata:
+  name: platform
+  description: Platform Developers
+spec:
+  type: team
+  profile:
+    # Intentional no displayName for testing
+    email: platform-developers@example.com
+    picture: https://api.dicebear.com/7.x/identicon/svg?seed=Fluffy&backgroundType=solid,gradientLinear&backgroundColor=ffd5dc,b6e3f4
+  parent: backstage
+  children: []
+---
+apiVersion: backstage.io/v1alpha1
+kind: Group
+metadata:
+  name: og-developers
+  description: OG Developers
+spec:
+  type: team
+  profile:
+    # Intentional no displayName for testing
+    email: og-developers@example.com
+    picture: https://api.dicebear.com/7.x/identicon/svg?seed=Fluffy&backgroundType=solid,gradientLinear&backgroundColor=ffd5dc,b6e3f4
+  parent: backstage
+  children: []

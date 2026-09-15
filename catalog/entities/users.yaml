@@ -1,0 +1,6 @@
+apiVersion: backstage.io/v1alpha1
+kind: User
+metadata:
+  name: RyanJKS
+spec:
+  memberOf: [platform, og-developers]

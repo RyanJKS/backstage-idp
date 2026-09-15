@@ -57,3 +57,7 @@ e2e-test-report/
 .tokensave/
 .serena/
 .env.yarn
+
+# Local credentials; only placeholder examples belong in Git.
+.env*
+!.env*.example
